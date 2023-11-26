@@ -3,6 +3,7 @@ const app = express();
 const cors = require('cors')
 const jwt = require('jsonwebtoken');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY)
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -31,6 +32,7 @@ async function run() {
     const teacherRequestCollection = client.db("letsSkillDb").collection("teacherrequest")
     const usersCollection = client.db("letsSkillDb").collection("users")
     const classesCollection = client.db("letsSkillDb").collection("classes")
+    const paymentCollection = client.db("letsSkillDb").collection("payments")
 
     // jwt related apis
 
@@ -65,11 +67,11 @@ async function run() {
         return res.status(403).send({ message: 'forbidden access' });
       }
       next();
-    } 
+    }
 
     // teacher request apis
 
-    app.post('/teacherrequest', async(req, res)=>{
+    app.post('/teacherrequest', async (req, res) => {
       const item = req.body;
       const result = await teacherRequestCollection.insertOne(item);
       res.send(result)
@@ -98,12 +100,12 @@ async function run() {
       res.send({ admin });
     })
 
-    app.put('/teacherrequest/teacher/:id', async(req, res)=>{
-      const id= req.params.id;
-      const filter = {_id: new ObjectId(id)}
+    app.put('/teacherrequest/teacher/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
       const updatedclass = req.body;
-      
+
       const product = {
         $set: {
           role: updatedclass.role,
@@ -141,13 +143,13 @@ async function run() {
       const result = await usersCollection.insertOne(user)
       res.send(result)
     })
-    app.get('/users',verifyToken, verifyAdmin, async (req, res) => {
+    app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers)
       const filter = req.query;
       const query = {
         name: { $regex: filter.search || '', $options: 'i' },
-        
-    }
+
+      }
       const result = await usersCollection.find(query).toArray()
       res.send(result)
     })
@@ -168,9 +170,9 @@ async function run() {
     })
 
 
-    app.patch('/users/admin/:id', async(req, res)=>{
-      const id= req.params.id;
-      const filter = {_id: new ObjectId(id)}
+    app.patch('/users/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
       const updatedDoc = {
         $set: {
           role: 'admin'
@@ -183,7 +185,7 @@ async function run() {
 
     // teacher dashboard informations
 
-    app.post('/addclasses', async(req, res)=>{
+    app.post('/addclasses', async (req, res) => {
       const item = req.body;
       const result = await classesCollection.insertOne(item);
       res.send(result)
@@ -197,7 +199,7 @@ async function run() {
       res.send(result)
     })
 
-    app.get('/addclasses/adminroute',verifyToken, verifyAdmin, async (req, res) => {
+    app.get('/addclasses/adminroute', verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers)
       const result = await classesCollection.find().toArray()
       res.send(result)
@@ -233,7 +235,7 @@ async function run() {
           image: item.image
         }
       }
-  
+
       const result = await classesCollection.updateOne(filter, updatedDoc)
       res.send(result);
     })
@@ -246,12 +248,12 @@ async function run() {
     })
 
 
-    app.put('/addclasses/adminroute/admin/:id', async(req, res)=>{
-      const id= req.params.id;
-      const filter = {_id: new ObjectId(id)}
+    app.put('/addclasses/adminroute/admin/:id', async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
       const options = { upsert: true };
       const updatedclass = req.body;
-      
+
       const product = {
         $set: {
           status: updatedclass.status,
@@ -278,8 +280,39 @@ async function run() {
     })
 
 
-   
-    
+    //payment intent
+    app.post('/create-payment-intent', async (req, res) => {
+      const { price } = req.body;
+      const amount = parseInt(price * 100);
+      console.log(amount, 'amount inside the intent')
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: amount,
+        currency: 'usd',
+        payment_method_types: ['card']
+      });
+
+      res.send({
+        clientSecret: paymentIntent.client_secret
+      })
+    });
+
+    // payment related apis
+    app.post('/payments', async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      res.send({ paymentResult });
+    })
+
+    app.get('/payments/:email', verifyToken, async (req, res) => {
+      const query = { email: req.params.email }
+      if (req.params.email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' });
+      }
+      const result = await paymentCollection.find(query).toArray();
+      res.send(result);
+    })
+
+
 
 
 
