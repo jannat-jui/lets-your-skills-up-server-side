@@ -80,6 +80,8 @@ async function run() {
       res.send(result)
     })
 
+
+
     app.get('/teacherrequest/teacher/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
 
@@ -96,19 +98,36 @@ async function run() {
       res.send({ admin });
     })
 
-
-    app.patch('/teacherrequest/teacher/:id', async(req, res)=>{
+    app.put('/teacherrequest/teacher/:id', async(req, res)=>{
       const id= req.params.id;
       const filter = {_id: new ObjectId(id)}
-      const updatedDoc = {
+      const options = { upsert: true };
+      const updatedclass = req.body;
+      
+      const product = {
         $set: {
-          role: 'teacher'
+          role: updatedclass.role,
+
         }
       }
-      const result = await teacherRequestCollection.updateOne(filter, updatedDoc);
+
+      const result = await teacherRequestCollection.updateOne(filter, product, options);
       res.send(result)
 
     })
+
+    // app.patch('/teacherrequest/teacher/:id', async(req, res)=>{
+    //   const id= req.params.id;
+    //   const filter = {_id: new ObjectId(id)}
+    //   const updatedDoc = {
+    //     $set: {
+    //       role: 'teacher'
+    //     }
+    //   }
+    //   const result = await teacherRequestCollection.updateOne(filter, updatedDoc);
+    //   res.send(result)
+
+    // })
 
 
 
@@ -198,6 +217,32 @@ async function run() {
         admin = user?.role === 'admin';
       }
       res.send({ admin });
+    })
+
+    app.patch('/addclasses/:id', verifyToken, async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const updatedDoc = {
+        $set: {
+          name: item.name,
+          email: item.email,
+          title: item.title,
+          price: item.price,
+          description: item.description,
+          image: item.image
+        }
+      }
+  
+      const result = await classesCollection.updateOne(filter, updatedDoc)
+      res.send(result);
+    })
+
+    app.delete('/addclasses/:id', verifyToken, async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await classesCollection.deleteOne(query)
+      res.send(result);
     })
 
 
