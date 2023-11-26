@@ -30,6 +30,7 @@ async function run() {
 
     const teacherRequestCollection = client.db("letsSkillDb").collection("teacherrequest")
     const usersCollection = client.db("letsSkillDb").collection("users")
+    const classesCollection = client.db("letsSkillDb").collection("classes")
 
     // jwt related apis
 
@@ -79,6 +80,37 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/teacherrequest/teacher/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+
+      const query = { email: email };
+      const user = await teacherRequestCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'teacher';
+      }
+      res.send({ admin });
+    })
+
+
+    app.patch('/teacherrequest/teacher/:id', async(req, res)=>{
+      const id= req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const updatedDoc = {
+        $set: {
+          role: 'teacher'
+        }
+      }
+      const result = await teacherRequestCollection.updateOne(filter, updatedDoc);
+      res.send(result)
+
+    })
+
+
 
     app.post('/users', async (req, res) => {
       const user = req.body;
@@ -90,11 +122,27 @@ async function run() {
       const result = await usersCollection.insertOne(user)
       res.send(result)
     })
-    app.get('/users', async (req, res) => {
+    app.get('/users',verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers)
       const result = await usersCollection.find().toArray()
       res.send(result)
     })
+    app.get('/users/admin/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+
+      const query = { email: email };
+      const user = await usersCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({ admin });
+    })
+
 
     app.patch('/users/admin/:id', async(req, res)=>{
       const id= req.params.id;
@@ -108,6 +156,80 @@ async function run() {
       res.send(result)
 
     })
+
+    // teacher dashboard informations
+
+    app.post('/addclasses', async(req, res)=>{
+      const item = req.body;
+      const result = await classesCollection.insertOne(item);
+      res.send(result)
+    })
+
+
+    app.get('/addclasses', async (req, res) => {
+      const email = req.query.email;
+      const query = { email: email }
+      const result = await classesCollection.find(query).toArray()
+      res.send(result)
+    })
+
+    app.get('/addclasses/adminroute',verifyToken, verifyAdmin, async (req, res) => {
+      console.log(req.headers)
+      const result = await classesCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.get('/addclasses/adminroute/admin/:email', verifyToken, async (req, res) => {
+      const email = req.params.email;
+
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: 'forbidden access' })
+      }
+
+      const query = { email: email };
+      const user = await classesCollection.findOne(query);
+      let admin = false;
+      if (user) {
+        admin = user?.role === 'admin';
+      }
+      res.send({ admin });
+    })
+
+
+    app.put('/addclasses/adminroute/admin/:id', async(req, res)=>{
+      const id= req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const options = { upsert: true };
+      const updatedclass = req.body;
+      
+      const product = {
+        $set: {
+          status: updatedclass.status,
+
+        }
+      }
+
+      const result = await classesCollection.updateOne(filter, product, options);
+      res.send(result)
+
+    })
+
+    app.get('/addclasses/adminroute/approved', async (req, res) => {
+
+      const result = await classesCollection.find({ status: 'approved' }).toArray()
+      res.send(result)
+    })
+
+    app.get('/addclasses/adminroute/approved/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) }
+      const result = await classesCollection.findOne(query);
+      res.send(result);
+    })
+
+
+   
+    
 
 
 
