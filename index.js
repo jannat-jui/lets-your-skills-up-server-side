@@ -124,7 +124,12 @@ async function run() {
     })
     app.get('/users',verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers)
-      const result = await usersCollection.find().toArray()
+      const filter = req.query;
+      const query = {
+        name: { $regex: filter.search || '', $options: 'i' },
+        
+    }
+      const result = await usersCollection.find(query).toArray()
       res.send(result)
     })
     app.get('/users/admin/:email', verifyToken, async (req, res) => {
