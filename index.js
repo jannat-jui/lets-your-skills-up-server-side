@@ -269,8 +269,14 @@ async function run() {
     })
 
     app.get('/addclasses/adminroute/approved', async (req, res) => {
+      let sortObj = {}
+      const sortField = req.query.sortField
+      const sortOrder = req.query.sortOrder
+      if (sortField && sortOrder) {
+        sortObj[sortField] = sortOrder
+      }
 
-      const result = await classesCollection.find({ status: 'approved' }).toArray()
+      const result = await classesCollection.find({ status: 'approved' }).sort(sortObj).toArray()
       res.send(result)
     })
 
@@ -351,6 +357,15 @@ async function run() {
         { $inc: { enrollCount: 1 } }
       );
       res.send(result);
+    })
+
+    // state counts 
+
+    app.get('/admin-stats',  async(req, res)=>{
+      const users = await usersCollection.estimatedDocumentCount();
+      const classItems = await classesCollection.countDocuments({ status: 'approved' });
+      const enrolls = await paymentCollection.estimatedDocumentCount();
+      res.send({users, classItems, enrolls})
     })
 
 
