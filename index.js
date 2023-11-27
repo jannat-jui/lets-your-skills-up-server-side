@@ -34,6 +34,7 @@ async function run() {
     const classesCollection = client.db("letsSkillDb").collection("classes")
     const paymentCollection = client.db("letsSkillDb").collection("payments")
     const assignmentCollection = client.db("letsSkillDb").collection("assignments")
+    const feedBackCollection = client.db("letsSkillDb").collection("feedbacks")
 
     // jwt related apis
 
@@ -325,6 +326,18 @@ async function run() {
       res.send(result);
     })
 
+    //feedbacks
+    app.post('/feedbacks', async (req, res) => {
+      const payment = req.body;
+      const paymentResult = await feedBackCollection.insertOne(payment);
+      res.send(paymentResult);
+    })
+
+    app.get('/feedbacks', async (req, res) => {
+
+      const result = await feedBackCollection.find().toArray()
+      res.send(result)
+    })
 
 
     // tatal enroll ment count
