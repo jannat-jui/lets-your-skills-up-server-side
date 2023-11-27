@@ -33,6 +33,7 @@ async function run() {
     const usersCollection = client.db("letsSkillDb").collection("users")
     const classesCollection = client.db("letsSkillDb").collection("classes")
     const paymentCollection = client.db("letsSkillDb").collection("payments")
+    const assignmentCollection = client.db("letsSkillDb").collection("assignments")
 
     // jwt related apis
 
@@ -279,6 +280,18 @@ async function run() {
       res.send(result);
     })
 
+    // class assignments
+    app.post('/assignments', async (req, res) => {
+      const item = req.body;
+      const result = await assignmentCollection.insertOne(item);
+      res.send(result)
+    })
+
+    app.get('/assignments', async (req, res) => {
+      const result = await assignmentCollection.find().toArray()
+      res.send(result)
+    })
+
 
     //payment intent
     app.post('/create-payment-intent', async (req, res) => {
@@ -300,7 +313,7 @@ async function run() {
     app.post('/payments', async (req, res) => {
       const payment = req.body;
       const paymentResult = await paymentCollection.insertOne(payment);
-      res.send({ paymentResult });
+      res.send(paymentResult);
     })
 
     app.get('/payments/:email', verifyToken, async (req, res) => {
@@ -311,6 +324,26 @@ async function run() {
       const result = await paymentCollection.find(query).toArray();
       res.send(result);
     })
+
+
+
+    // tatal enroll ment count
+    
+
+    app.patch('/addclasses/adminroute/approved/:id', async (req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const result = await classesCollection.updateOne(
+        { _id: new ObjectId(id) },
+        { $inc: { enrollCount: 1 } }
+      );
+      res.send(result);
+    })
+
+
+
+
+
 
 
 
