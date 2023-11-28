@@ -35,6 +35,7 @@ async function run() {
     const paymentCollection = client.db("letsSkillDb").collection("payments")
     const assignmentCollection = client.db("letsSkillDb").collection("assignments")
     const feedBackCollection = client.db("letsSkillDb").collection("feedbacks")
+    const assignmentSubmissionCollection = client.db("letsSkillDb").collection("assignmentsubmission")
 
     // jwt related apis
 
@@ -80,8 +81,16 @@ async function run() {
     })
 
     app.get('/teacherrequest', async (req, res) => {
-      const result = await teacherRequestCollection.find().toArray()
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const result = await teacherRequestCollection.find().skip(page * size)
+      .limit(size).toArray()
       res.send(result)
+    })
+
+    app.get('/teacherrequestcount', async (req, res) => {
+      const count = await teacherRequestCollection.estimatedDocumentCount();
+      res.send({ count });
     })
 
 
@@ -92,6 +101,8 @@ async function run() {
       if (email !== req.decoded.email) {
         return res.status(403).send({ message: 'forbidden access' })
       }
+
+      
 
       const query = { email: email };
       const user = await teacherRequestCollection.findOne(query);
@@ -147,14 +158,19 @@ async function run() {
     })
     app.get('/users', verifyToken, verifyAdmin, async (req, res) => {
       console.log(req.headers)
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
       const filter = req.query;
       const query = {
         name: { $regex: filter.search || '', $options: 'i' },
 
       }
-      const result = await usersCollection.find(query).toArray()
+      const result = await usersCollection.find(query).skip(page * size)
+      .limit(size).toArray()
       res.send(result)
     })
+
     app.get('/users/admin/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
 
@@ -195,9 +211,11 @@ async function run() {
 
 
     app.get('/addclasses', async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       const email = req.query.email;
       const query = { email: email }
-      const result = await classesCollection.find(query).toArray()
+      const result = await classesCollection.find(query).skip(page * size).limit(size).toArray()
       res.send(result)
     })
 
@@ -269,6 +287,12 @@ async function run() {
     })
 
     app.get('/addclasses/adminroute/approved', async (req, res) => {
+
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+
+
+
       let sortObj = {}
       const sortField = req.query.sortField
       const sortOrder = req.query.sortOrder
@@ -276,8 +300,14 @@ async function run() {
         sortObj[sortField] = sortOrder
       }
 
-      const result = await classesCollection.find({ status: 'approved' }).sort(sortObj).toArray()
+      const result = await classesCollection.find({ status: 'approved' }).sort(sortObj).skip(page * size)
+      .limit(size).toArray()
       res.send(result)
+    })
+
+    app.get('/addclassescount', async (req, res) => {
+      const count = await classesCollection.countDocuments({ status: 'approved' });
+      res.send({ count });
     })
 
     app.get('/addclasses/adminroute/approved/:id', async (req, res) => {
@@ -358,6 +388,21 @@ async function run() {
       );
       res.send(result);
     })
+
+    // assignment submission
+    app.post('/assignmentsubmission', async (req, res) => {
+      const assignments = req.body;
+      const assignmentSubmission = await assignmentSubmissionCollection.insertOne(assignments);
+      res.send(assignmentSubmission);
+    })
+
+    app.get('/assignmentsubmission', async (req, res) => {
+
+      const result = await assignmentSubmissionCollection.find().toArray()
+      res.send(result)
+    })
+
+
 
     // state counts 
 
