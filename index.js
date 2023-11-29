@@ -10,7 +10,9 @@ const port = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-  ],
+    // 'https://letsyourskillup.web.app',
+    // 'https://letsyourskillup.firebaseapp.com'
+],
   credentials: true
 }));
 app.use(express.json());
@@ -219,10 +221,25 @@ async function run() {
       res.send(result)
     })
 
+    app.get('/classescount/email', async (req, res) => {
+      const email = req.query.email;
+    const query = { email: email };
+    const totalCount = await classesCollection.countDocuments(query);
+    res.send({ totalCount });
+    })
+
     app.get('/addclasses/adminroute', verifyToken, verifyAdmin, async (req, res) => {
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
       console.log(req.headers)
-      const result = await classesCollection.find().toArray()
+      const result = await classesCollection.find().skip(page * size)
+      .limit(size).toArray()
       res.send(result)
+    })
+
+    app.get('/allclassescount', async (req, res) => {
+      const count = await classesCollection.estimatedDocumentCount();
+      res.send({ count });
     })
 
     app.get('/addclasses/adminroute/admin/:email', verifyToken, async (req, res) => {
@@ -422,7 +439,7 @@ async function run() {
 
 
 
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     //   await client.close();
